@@ -1,0 +1,44 @@
+# GitHub token (敏感信息)
+config/.github_token
+
+# 搜索结果 (可能包含敏感信息)
+results/*
+
+# 临时文件
+*.tmp
+*.log
+*.pyc
+__pycache__/
+
+# 克隆的第三方项目（避免上传别人的代码）
+vulnerable_repos_analysis/ansible_homelab/
+vulnerable_repos_analysis/automation-lyoko-docker/
+vulnerable_repos_analysis/charts/
+vulnerable_repos_analysis/ClusterFactory/
+vulnerable_repos_analysis/cnp-flux-config/
+vulnerable_repos_analysis/Console/
+vulnerable_repos_analysis/docker/
+vulnerable_repos_analysis/fail2ban/
+vulnerable_repos_analysis/igecloudsdev-drupal/
+vulnerable_repos_analysis/iptv/
+vulnerable_repos_analysis/ldap-overleaf-sl/
+vulnerable_repos_analysis/middleware-manager/
+vulnerable_repos_analysis/midnightsun/
+vulnerable_repos_analysis/netai-chat-with-your-data/
+vulnerable_repos_analysis/onramp/
+vulnerable_repos_analysis/tailchat/
+vulnerable_repos_analysis/traefik/
+vulnerable_repos_analysis/traefik-crowdsec-bouncer/
+vulnerable_repos_analysis/traefikGateway/
+vulnerable_repos_analysis/traefik-plugin-response-code-override/
+vulnerable_repos_analysis/trajano-swarm/
+
+# 或者使用通配符忽略所有克隆的项目目录（除了 cve_reports）
+vulnerable_repos_analysis/*/
+!vulnerable_repos_analysis/cve_reports/
+!vulnerable_repos_analysis/*.md
+!vulnerable_repos_analysis/*.txt
+
+# 忽略所有克隆项目中的 .git 目录（避免检测为嵌入的 git 仓库）
+vulnerable_repos_analysis/*/.git/
+vulnerable_repos_analysis/*/.git

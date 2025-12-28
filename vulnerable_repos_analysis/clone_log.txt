@@ -1,0 +1,9 @@
+==========================================
+克隆高风险项目（没有白名单）
+==========================================
+
+准备克隆 22 个高风险项目
+目标目录: /home/rui/ci/traefik/security_research/vulnerable_repos_analysis
+
+[1/22] 克隆: hmcts/cnp-flux-config
+  ✓ 克隆成功

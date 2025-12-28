@@ -1,0 +1,15 @@
+# 最简单的 Traefik 配置文件
+# 用于直接运行测试
+
+api:
+  insecure: true  # 启用 API 和 Dashboard（不安全模式，仅用于开发）
+
+entryPoints:
+  web:
+    address: ":8080"  # 使用非特权端口，避免需要 root 权限
+
+# 使用文件提供者（可选，如果不配置提供者，Traefik 仍然可以运行）
+providers:
+  file:
+    filename: ""  # 空配置，仅用于测试
+
