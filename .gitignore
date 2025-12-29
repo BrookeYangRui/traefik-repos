@@ -42,3 +42,4 @@ vulnerable_repos_analysis/*/
 # 忽略所有克隆项目中的 .git 目录（避免检测为嵌入的 git 仓库）
 vulnerable_repos_analysis/*/.git/
 vulnerable_repos_analysis/*/.git
+.env
