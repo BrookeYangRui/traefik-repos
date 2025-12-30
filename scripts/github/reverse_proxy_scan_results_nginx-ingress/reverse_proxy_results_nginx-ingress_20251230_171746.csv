@@ -1,0 +1,3 @@
+Index,Repository,URL,Stars,Year,Proxy Type,Vulnerability Type,Risk Level,Has TrustedIPs,File Path
+1,traefik/ingress-nginx-migration,https://github.com/traefik/ingress-nginx-migration,48,2025,nginx-ingress,nginx ingress configuration,medium,No,tmp_reverse_proxy/scan_1_1767115066/traefik_ingress-nginx-migration/.goreleaser.yaml
+2,traefik/ingress-nginx-migration,https://github.com/traefik/ingress-nginx-migration,48,2025,nginx-ingress,nginx ingress configuration,medium,No,tmp_reverse_proxy/scan_1_1767115066/traefik_ingress-nginx-migration/pkg/analyzer/testdata/00-ingressclass.yml

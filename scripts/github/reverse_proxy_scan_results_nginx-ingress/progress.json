@@ -1,0 +1,11 @@
+{
+    "processed_repos": [
+        "traefik/ingress-nginx-migration",
+        "ubermorgenland/ingress-migration-kit",
+        "dsekz/twitter-x-xp-forwarded-for-header",
+        "log1cb0mb/ingress2keg"
+    ],
+    "current_date": "2025-04-22",
+    "last_successful_search": "2025-12-30 17:22:25",
+    "proxy_type": "nginx-ingress"
+}

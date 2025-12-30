@@ -1,0 +1,9 @@
+{
+    "proxy_type": "nginx-ingress",
+    "total_repos_processed": 0,
+    "total_matches": 0,
+    "repos_by_stars": {},
+    "matches_by_type": {},
+    "duration_seconds": 14.132779,
+    "last_updated": "2025-12-30 17:22:25"
+}
