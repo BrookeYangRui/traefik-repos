@@ -82,6 +82,28 @@ class UltraFastTraefikScanner:
         else:
             self.config = self.load_config(config_path)
         
+        # Ensure config has all required sections
+        if 'logging' not in self.config:
+            self.config['logging'] = {
+                'level': 'INFO',
+                'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                'date_format': '%Y-%m-%d %H:%M:%S'
+            }
+        if 'search' not in self.config:
+            self.config['search'] = {
+                'min_stars': 50,
+                'time_window': {
+                    'start_date': '2015-01-01',
+                    'end_date': 'now',
+                    'window_size_days': 30
+                }
+            }
+        if 'concurrency' not in self.config:
+            self.config['concurrency'] = {
+                'max_workers': 16,
+                'clone_timeout': 300
+            }
+        
         # Setup output directory
         self.output_dir = Path('traefik_scan_results')
         self.output_dir.mkdir(exist_ok=True)
@@ -622,139 +644,90 @@ class UltraFastTraefikScanner:
                 
                 self.logger.info(f"[TIME] Searching time range: {start_window.strftime('%Y-%m-%d')} to {end_window.strftime('%Y-%m-%d')}")
                 
-                # Search for repositories with Traefik configuration using code search
-                # Then filter by repository creation date
-                # Using precise search queries to match actual configuration formats
-                search_queries = [
-                    # forwardedHeaders.insecure - Command line format (no value, just flag)
-                    {
-                        'name': 'forwardedHeaders.insecure (command line)',
-                        'query': '"forwardedHeaders.insecure" language:yaml',
-                        'file_extensions': ['.yml', '.yaml']
-                    },
-                    {
-                        'name': 'forwardedHeaders.insecure (command line)',
-                        'query': '"forwardedHeaders.insecure" language:toml',
-                        'file_extensions': ['.toml']
-                    },
-                    # forwardedHeaders.insecure - YAML with value
-                    {
-                        'name': 'forwardedHeaders.insecure: true (YAML)',
-                        'query': '"forwardedHeaders.insecure:" true language:yaml',
-                        'file_extensions': ['.yml', '.yaml']
-                    },
-                    {
-                        'name': 'forwardedHeaders.insecure = true (TOML)',
-                        'query': '"forwardedHeaders.insecure" = true language:toml',
-                        'file_extensions': ['.toml']
-                    },
-                    # forwardedHeaders nested format
-                    {
-                        'name': 'forwardedHeaders: { insecure: true } (YAML)',
-                        'query': 'forwardedHeaders insecure true language:yaml',
-                        'file_extensions': ['.yml', '.yaml']
-                    },
-                    # trustForwardHeader - Labels format (no space)
-                    {
-                        'name': 'trustForwardHeader=true (labels)',
-                        'query': 'trustForwardHeader=true language:yaml',
-                        'file_extensions': ['.yml', '.yaml']
-                    },
-                    # trustForwardHeader - YAML format (with space)
-                    {
-                        'name': 'trustForwardHeader: true (YAML)',
-                        'query': '"trustForwardHeader:" true language:yaml',
-                        'file_extensions': ['.yml', '.yaml']
-                    },
-                    # trustForwardHeader - TOML format
-                    {
-                        'name': 'trustForwardHeader = true (TOML)',
-                        'query': 'trustForwardHeader = true language:toml',
-                        'file_extensions': ['.toml']
-                    }
+                # Use repository search with time window and keywords (like UltraFastScanner)
+                # Build search query for repositories containing Traefik keywords
+                traefik_keywords = [
+                    'forwardedHeaders',
+                    'trustForwardHeader',
+                    'traefik'
                 ]
                 
-                all_repos = set()
+                all_repos = []
                 
-                # Search for code in this time window
-                for search in search_queries:
+                # Search for repositories in this time window that might contain Traefik config
+                for keyword in traefik_keywords:
                     try:
                         current_client = self.get_best_github_client()
-                        code_results = current_client.search_code(
-                            query=search['query'],
-                            sort='indexed',
-                            order='desc'
-                        )
                         
-                        total_results = code_results.totalCount
-                        self.logger.info(f"[FOUND] Found {total_results} code results for '{search['name']}'")
+                        # Build repository search query with time window and stars
+                        if min_stars > 0:
+                            repo_query = (
+                                f'{keyword} '
+                                f'stars:>={min_stars} '
+                                f'archived:false '
+                                f'created:{start_window.strftime("%Y-%m-%d")}..{end_window.strftime("%Y-%m-%d")}'
+                            )
+                        else:
+                            repo_query = (
+                                f'{keyword} '
+                                f'archived:false '
+                                f'created:{start_window.strftime("%Y-%m-%d")}..{end_window.strftime("%Y-%m-%d")}'
+                            )
                         
-                        # Process results and filter by creation date
-                        count = 0
-                        filtered_count = 0
+                        self.logger.info(f"[QUERY] Search query for '{keyword}': {repo_query}")
                         
-                        for item in code_results:
-                            # Check file extension
-                            if not any(item.name.endswith(ext) for ext in search['file_extensions']):
-                                continue
+                        repositories = current_client.search_repositories(query=repo_query)
+                        total_repos = repositories.totalCount
+                        self.logger.info(f"[FOUND] Found {total_repos} repositories for '{keyword}' in this time window")
+                        
+                        if total_repos > 0:
+                            # Convert to list
+                            repo_list = []
+                            count = 0
                             
-                            repo = item.repository
-                            repo_key = repo.full_name
-                            
-                            # Filter by repository creation date and stars
-                            try:
-                                full_repo = current_client.get_repo(repo.full_name)
-                                repo_created = full_repo.created_at.date()
-                                repo_stars = full_repo.stargazers_count
-                                window_start = start_window.date()
-                                window_end = end_window.date()
+                            for repo in repositories:
+                                repo_key = repo.full_name
                                 
-                                # Check if repository was created in this time window and meets min_stars requirement
-                                if window_start <= repo_created <= window_end and repo_stars >= min_stars:
-                                    if repo_key not in all_repos:
-                                        all_repos.add(repo_key)
-                                        # Store repo object for processing
-                                        all_repos.add(full_repo)
-                                        filtered_count += 1
-                                        
-                                        if filtered_count % 50 == 0:
-                                            self.logger.info(f"[PROGRESS] Found {filtered_count} repositories (≥{min_stars} stars) in time window for '{search['name']}'")
-                                        
-                                        # Rate limiting
-                                        if filtered_count % 100 == 0:
-                                            time.sleep(1)
+                                # Skip if already in all_repos
+                                if any(r.full_name == repo_key for r in all_repos):
+                                    continue
                                 
+                                all_repos.append(repo)
                                 count += 1
                                 
-                                # Limit total code results to process
-                                if count >= 2000:
-                                    break
-                                    
-                            except Exception as e:
-                                self.logger.debug(f"[ERROR] Failed to get repo {repo.full_name}: {e}")
-                                continue
-                        
-                        self.logger.info(f"[COMPLETE] Processed {count} code results, found {filtered_count} repositories in time window for '{search['name']}'")
+                                if count % 50 == 0:
+                                    self.logger.info(f"[PROGRESS] Loaded {count}/{total_repos} repositories for '{keyword}'")
+                                
+                                # Rate limiting
+                                if count % 100 == 0:
+                                    time.sleep(1)
+                            
+                            self.logger.info(f"[COMPLETE] Processed {count} repositories for '{keyword}'")
                         
                     except Exception as search_error:
-                        self.logger.error(f"[ERROR] Search failed for '{search['name']}' in time range {start_window.strftime('%Y-%m-%d')} to {end_window.strftime('%Y-%m-%d')}: {search_error}")
+                        self.logger.error(f"[ERROR] Search failed for '{keyword}' in time range {start_window.strftime('%Y-%m-%d')} to {end_window.strftime('%Y-%m-%d')}: {search_error}")
                         
                         # Check if it's a rate limit error
                         if "403" in str(search_error) or "rate limit" in str(search_error).lower():
                             self.logger.warning("[RATE_LIMIT] GitHub API rate limit hit, waiting 60 seconds...")
                             time.sleep(60)
                         
-                        # Continue to next search instead of stopping
+                        # Continue to next keyword instead of stopping
                         continue
                 
-                # Convert set to list and filter out strings (keep only repo objects)
-                repo_list = [r for r in all_repos if hasattr(r, 'full_name')]
+                # Remove duplicates
+                seen = set()
+                unique_repos = []
+                for repo in all_repos:
+                    if repo.full_name not in seen:
+                        seen.add(repo.full_name)
+                        unique_repos.append(repo)
                 
-                self.logger.info(f"[TOTAL] Found {len(repo_list)} unique repositories in time window {start_window.strftime('%Y-%m-%d')} to {end_window.strftime('%Y-%m-%d')}")
+                self.logger.info(f"[TOTAL] Found {len(unique_repos)} unique repositories in time window {start_window.strftime('%Y-%m-%d')} to {end_window.strftime('%Y-%m-%d')}")
                 
                 # Process repositories found in this time window
-                if repo_list:
-                    self.batch_process_repositories(repo_list)
+                if unique_repos:
+                    self.batch_process_repositories(unique_repos)
                 
                 # Move to next time window
                 current_date = start_window
